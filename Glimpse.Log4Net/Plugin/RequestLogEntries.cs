@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Caching;
 using System.Web;
 using Glimpse.Core.Extensibility;
 using Glimpse.Log4Net.Appender;
@@ -11,6 +12,8 @@ namespace Glimpse.Log4Net.Plugin
     public class RequestLogEntries : ITab, ITabSetup
     {
         public const string ContextKey = "Glimpse.Log4Net.LogEntries";
+
+        private readonly ObjectCache Cache = MemoryCache.Default;
         
         /// <summary>
         /// The maximum number of log entries to serialize to the client.
@@ -26,7 +29,7 @@ namespace Glimpse.Log4Net.Plugin
         public static volatile int MaxDetailedLogs = 1000;
 
         public object GetData(ITabContext context) {
-            return GetData(context.GetRequestContext<HttpContextBase>());
+            return GetData();
         }
 
         public string Name
@@ -46,10 +49,11 @@ namespace Glimpse.Log4Net.Plugin
             }
         }
 
-        public object GetData(HttpContextBase context)
+        public object GetData()
         {
-            var logEntries = (IEnumerable<LoggingEvent>)context.Items[ContextKey];
+            var logEntries = Cache.Get(ContextKey) as IEnumerable<LoggingEvent>;
 
+            //var logEntries = (IEnumerable<LoggingEvent>)context.Items[ContextKey];
             if (logEntries == null)
                 return null;
 
@@ -86,7 +90,12 @@ namespace Glimpse.Log4Net.Plugin
 
 
             // Clean up after ourselves
-            context.Items[ContextKey] = null;
+            //context.Items[ContextKey] = null;
+
+            if (!includeDetails)
+            {
+                Cache.Remove(ContextKey);
+            }
 
             return data;
         }

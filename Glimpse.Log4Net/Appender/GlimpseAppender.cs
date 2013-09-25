@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Configuration;
 using System.Linq;
+using System.Runtime.Caching;
 using System.Web;
 using Glimpse.Core;
 using log4net;
@@ -95,15 +96,21 @@ namespace Glimpse.Log4Net.Appender
 
         protected override void Append(LoggingEvent loggingEvent)
         {
-            var context = HttpContext.Current;
+            var context = MemoryCache.Default;
+
+            //var context = HttpContext.Current;
 
             if (context == null)
                 return;
 
-            if (context.Items[ContextKey] == null)
-                context.Items[ContextKey] = new List<LoggingEvent>();
+            var list = context[ContextKey] as List<LoggingEvent>;
+            if (list == null)
+            {
+               list = new List<LoggingEvent>();
+            }
 
-            ((IList<LoggingEvent>)context.Items[ContextKey]).Add(loggingEvent);
+            list.Add(loggingEvent);
+            context[ContextKey] = list;
         }
     }
 }
